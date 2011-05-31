@@ -53,7 +53,7 @@ namespace ns3
 	else if (dist>180)
 	  dist=180;
 	this->m_detectsVehicle = dist;
-	cout << "Detects ambulance from " << this->GetDetectsVehicleDistance() << endl;
+	//cout << "Detects ambulance from " << this->GetDetectsVehicleDistance() << endl;
   }
 
   Vehicle::~Vehicle()
