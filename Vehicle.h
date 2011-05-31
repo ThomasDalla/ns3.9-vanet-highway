@@ -32,6 +32,7 @@
 #include "ns3/mobility-module.h"
 #include "ns3/contrib-module.h"
 #include "ns3/wifi-module.h"
+#include "ns3/random-variable.h"
 #include "Model.h"
 #include "LaneChange.h"
 
@@ -80,6 +81,7 @@ namespace ns3
       int m_vehicleId;              // vehicle's id
       Ptr<Node> m_node;             // vehicle has a node
       Ptr<NetDevice> m_device;      // vehicle has a device
+      double m_detectsVehicle;		// distance the vehicle detects the emergency vehicle
 
 	  /// Catching an event when a packet is received.
       VehicleReceiveCallback m_receive;
@@ -285,7 +287,8 @@ namespace ns3
       /// sets the Vehicle's PhyStateTrace callback.
       void SetPhyStateTraceCallback(PhyStateTraceCallback phyStateTrace);
 	  /// used for purpose of considering market penetration rate.
-	  bool IsEquipped;  
+	  bool IsEquipped;
+	  double GetDetectsVehicleDistance();
 
     protected:
       /// ReceiverPacket handler. This is the handler which catches the Vehicle's Receive Data event.

@@ -76,7 +76,7 @@ int main (int argc, char *argv[])
   bool plot=false;
   bool twoDirectional=false;
   bool laneChange=true;
-  double flow1=1.0, flow2=1.0;
+  double flow1=0.5, flow2=0.5;
   //double flow1=0.5, flow2=0.5;
   double vel1=29, vel2=25;
   double pRate=100;

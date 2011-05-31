@@ -252,7 +252,6 @@ namespace ns3
   void Controller::AddAmbulanceVehicle(Ptr<Highway> highway)
   {
 
-      // TODO: Instead of creating a new vehicle,
       //       select a random vehicle around position x=1000
       //       and define it as an ambulance in service
 
@@ -335,7 +334,7 @@ namespace ns3
 */
 
     // Change lane for a driver without wifi
-    if(vehicle->GetVehicleId()!=this->ambulanceId && this->startTime>0 && !this->destinationReached)
+    if(vehicle->GetVehicleId()!=this->ambulanceId && this->startTime>0 && vehicle->GetLaneChange()->GetDbThreshold()!=this->emergencyDbThreshold && !this->destinationReached)
     {
         Ptr<Vehicle> ambulance = highway->FindVehicle(this->ambulanceId);
         double ambuX    = ambulance->GetPosition().x;
@@ -343,12 +342,11 @@ namespace ns3
         double ambuLane = ambulance->GetLane();
         double myLane   = vehicle->GetLane();
         double diff = myX - ambuX;
-        // TODO: Randomize the driver's reaction
-        if (myLane==ambuLane && myX >= ambuX && diff<=this->dstForDriverToReact && vehicle->GetLaneChange()->GetDbThreshold()!=this->emergencyDbThreshold)
+        if (myLane==ambuLane && myX >= ambuX && diff<=vehicle->GetDetectsVehicleDistance())
         {
-            double now=Simulator::Now().GetSeconds();
             if (false&&!Plot)
             {
+            	double now=Simulator::Now().GetSeconds();
                 cout << "at t=" << now << " veh " << vehicle->GetVehicleId() << " at " << diff << "m of the ambu tries to change lane (speed=" << vehicle->GetVelocity() << ")" << endl;
             }
             this->AskChangeLane(highway, vehicle);

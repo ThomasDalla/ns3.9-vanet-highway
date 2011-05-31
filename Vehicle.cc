@@ -46,10 +46,23 @@ namespace ns3
     m_length = 0;
     m_width = 0;
 	IsEquipped=true;
+	RandomVariable RV = NormalVariable(100.0,1000.0);
+	double dist= RV.GetValue();
+	if (dist<20)
+	  dist=20;
+	else if (dist>180)
+	  dist=180;
+	this->m_detectsVehicle = dist;
+	cout << "Detects ambulance from " << this->GetDetectsVehicleDistance() << endl;
   }
 
   Vehicle::~Vehicle()
   {
+  }
+
+  double Vehicle::GetDetectsVehicleDistance()
+  {
+	  return this->m_detectsVehicle;
   }
 
   void Vehicle::SetupWifi(const WifiHelper &wifi, const YansWifiPhyHelper &phy, const NqosWifiMacHelper &mac)
