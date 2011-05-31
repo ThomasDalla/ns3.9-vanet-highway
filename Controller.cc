@@ -260,8 +260,8 @@ namespace ns3
 
       YansWifiPhyHelper ambulancePhyHelper = YansWifiPhyHelper::Default();
       ambulancePhyHelper.SetChannel(highway->GetWifiChannel());
-      ambulancePhyHelper.Set("TxPowerStart",DoubleValue(30.0));
-      ambulancePhyHelper.Set("TxPowerEnd",DoubleValue(30.0));
+      ambulancePhyHelper.Set("TxPowerStart",DoubleValue(35.0));
+      ambulancePhyHelper.Set("TxPowerEnd",DoubleValue(35.0));
 
       Ptr<Vehicle> ambulance=CreateObject<Vehicle>();
       ambulance->SetupWifi(highway->GetWifiHelper(), ambulancePhyHelper, highway->GetNqosWifiMacHelper());
