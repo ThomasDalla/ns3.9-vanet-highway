@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Debug" />
+	<File name="Controller.cc" open="1" top="0" tabpos="2">
+		<Cursor position="1003" topLine="9" />
+	</File>
+	<File name="Controller.h" open="1" top="0" tabpos="3">
+		<Cursor position="1626" topLine="16" />
+	</File>
+	<File name="Highway.cc" open="0" top="0" tabpos="7">
+		<Cursor position="5759" topLine="210" />
+	</File>
+	<File name="Highway.h" open="0" top="0" tabpos="3">
+		<Cursor position="15701" topLine="344" />
+	</File>
+	<File name="LaneChange.cc" open="1" top="0" tabpos="4">
+		<Cursor position="2876" topLine="95" />
+	</File>
+	<File name="LaneChange.h" open="0" top="0" tabpos="7">
+		<Cursor position="2476" topLine="23" />
+	</File>
+	<File name="Model.cc" open="0" top="0" tabpos="9">
+		<Cursor position="1036" topLine="13" />
+	</File>
+	<File name="Model.h" open="0" top="0" tabpos="5">
+		<Cursor position="1065" topLine="25" />
+	</File>
+	<File name="Vehicle.cc" open="0" top="0" tabpos="0">
+		<Cursor position="1236" topLine="28" />
+	</File>
+	<File name="Vehicle.h" open="0" top="0" tabpos="6">
+		<Cursor position="3803" topLine="91" />
+	</File>
+	<File name="vanet-highway-test-thomas.cc" open="1" top="1" tabpos="1">
+		<Cursor position="2668" topLine="72" />
+	</File>
+</CodeBlocks_layout_file>
