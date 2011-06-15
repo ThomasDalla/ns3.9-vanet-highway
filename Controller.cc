@@ -180,23 +180,54 @@ namespace ns3
 		posName.append(laneStr.str());
 		string speedName = "vehiclesSpeedLane";
 		speedName.append(laneStr.str());
+		string averageGapName = "averageGapOnLane";
+		averageGapName.append(laneStr.str());
+		averageGapName.append("_New");
+		string minGapName = "minGapLane";
+		minGapName.append(laneStr.str());
+		string maxGapName = "maxGapLane";
+		maxGapName.append(laneStr.str());
 
-		for (size_t k=0; k<vehicles.size();k++)
+		bool nouveau=true;
+		int k=0;
+		double previousPos=0;
+		double gapTotal = 0;
+		double minGap = 10000;
+		double maxGap = 0;
+		double currentGap = 0;
+		double previousGap = 0;
+		while (vehicles.size()>0)
 		{
 		  ostringstream pos, vel;
 		  Ptr<Vehicle> v = vehicles.back();
 		  vehicles.pop_back();
-		  pos << v->GetPosition().x;
+		  double currentPos = v->GetPosition().x;
+		  pos << currentPos;
 		  vel << v->GetVelocity();
-		  if (k>0) {
+		  if (nouveau==false) {
+			  k++;
+			  currentGap = currentPos-previousPos;
+			  gapTotal += currentGap;
+			  if (currentGap>maxGap)
+				  maxGap = currentGap;
+			  if (currentGap<minGap)
+				  minGap = currentGap;
 			  vehiclesPos.append(" ");
 			  vehiclesSpeed.append(" ");
+		  } else {
+			  nouveau= false;
 		  }
 		  vehiclesPos.append(pos.str());
 		  vehiclesSpeed.append(vel.str());
+		  previousPos = currentPos;
+		  previousGap = currentGap;
 		}
+		double averageGap= 1.0*gapTotal/k;
 		this->JsonOutput(posName, vehiclesPos);
 		this->JsonOutput(speedName, vehiclesSpeed);
+		this->JsonOutput(averageGapName, averageGap);
+		this->JsonOutput(minGapName, minGap);
+		this->JsonOutput(maxGapName, maxGap);
   }
 
   void Controller::StartAmbulanceVehicle(Ptr<Highway> highway)
@@ -230,13 +261,13 @@ namespace ns3
               this->JsonOutput("ambuId", this->ambulanceId);
               this->JsonOutput("ambuStartX", ambuX);
               // Calculate the density
-              double length=highway->GetHighwayLength()-ambuX-1.0;
+              //double length=highway->GetHighwayLength()-ambuX-1.0;
               list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 0, dir);
               list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 1, dir);
-              double density0 = length/vehicles0.size();
-              double density1 = length/vehicles1.size();
               Ptr<Vehicle> last0 = vehicles0.front();
               Ptr<Vehicle> last1 = vehicles1.front();
+              double density0 = (last0->GetPosition().x-ambuX-1.0)/vehicles0.size();
+              double density1 = (last1->GetPosition().x-ambuX-1.0)/vehicles1.size();
               this->JsonOutput("vehiclesOnLane0", (int) vehicles0.size());
               this->JsonOutput("averageGapOnLane0", density0);
               this->JsonOutput("lastVehicleXOnLane0", last0->GetPosition().x);
