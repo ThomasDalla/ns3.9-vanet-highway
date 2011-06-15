@@ -49,6 +49,8 @@ namespace ns3
       double srcX;
       double emergencyDbThreshold;
       double dstForDriverToReact;
+      int laneChangeNb;
+      int laneChangeITS;
     public:
       /// Constructor.
       Controller();
@@ -68,8 +70,6 @@ namespace ns3
       Ptr<Highway> GetHighway();
       /// a flag for plotting vehicles.
       bool Plot;
-      void JsonOutput(string name, int value);
-      void JsonOutput(string name, double value);
 
       // Thomas addings
       /// add an ambulance vehicle
@@ -78,6 +78,14 @@ namespace ns3
       void StartAmbulanceVehicle(Ptr<Highway> highway);
       /// ask a car to change lane
       void AskChangeLane(Ptr<Highway> highway, Ptr<Vehicle> veh);
+      /// a flag for recording ambulance X position
+      bool RecordAmbuPos;
+      string AmbuFile;
+      string AmbuFileContent;
+      void JsonOutput(string name, int value);
+      void JsonOutput(string name, double value);
+      void JsonOutput(string name, string value);
+      void JsonOutputInitVehicles(int lane, std::list<Ptr<Vehicle> > vehicles);
   };
 }
 #endif

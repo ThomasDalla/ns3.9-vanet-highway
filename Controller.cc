@@ -23,6 +23,7 @@
 #include "Controller.h"
 #include <boost/algorithm/string.hpp>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
 using namespace ns3;
@@ -42,6 +43,9 @@ namespace ns3
   {
 	  T=-1.0;
 	  Plot=false;
+	  RecordAmbuPos=false;
+	  AmbuFile="./ambuX";
+	  AmbuFileContent="";
 	  this->destinationReached=false;
 	  this->timeToReachDest=0.0;
 	  this->ambulanceId = 0;
@@ -50,6 +54,8 @@ namespace ns3
 	  this->startTime = 0.0;
 	  this->emergencyDbThreshold = -0.5;
 	  this->dstForDriverToReact = 100;
+	  this->laneChangeNb=0;
+	  this->laneChangeITS=0;
   }
   Controller::Controller(Ptr<Highway> highway)
   {
@@ -140,6 +146,8 @@ namespace ns3
 
       Simulator::Schedule(Seconds(1000.0), &Controller::StartAmbulanceVehicle, this, highway);
       highway->SetAutoInject(true);
+      this->JsonOutput("ambuFile", AmbuFile);
+      //cout << "\"ambuFileChar\":\"" << AmbuFile.c_str() << "\"," << endl;
 
       // Return true: a signal to highway that the lane lists (queues) in where obstacles and vehicles are being added
       // must be sorted based on their positions.
@@ -155,6 +163,40 @@ namespace ns3
   void Controller::JsonOutput(string name, double value)
   {
 	  cout << "\"" << name << "\":" << value << "," << endl;
+  }
+
+  void Controller::JsonOutput(string name, string value)
+    {
+  	  cout << "\"" << name << "\":\"" << value << "\"," << endl;
+    }
+
+  void Controller::JsonOutputInitVehicles(int lane, std::list<Ptr<Vehicle> > vehicles)
+  {
+	    // vehicles on lane 0
+		string vehiclesPos, vehiclesSpeed;
+		ostringstream laneStr;
+		laneStr << lane;
+		string posName = "vehiclesPosLane";
+		posName.append(laneStr.str());
+		string speedName = "vehiclesSpeedLane";
+		speedName.append(laneStr.str());
+
+		for (size_t k=0; k<vehicles.size();k++)
+		{
+		  ostringstream pos, vel;
+		  Ptr<Vehicle> v = vehicles.back();
+		  vehicles.pop_back();
+		  pos << v->GetPosition().x;
+		  vel << v->GetVelocity();
+		  if (k>0) {
+			  vehiclesPos.append(" ");
+			  vehiclesSpeed.append(" ");
+		  }
+		  vehiclesPos.append(pos.str());
+		  vehiclesSpeed.append(vel.str());
+		}
+		this->JsonOutput(posName, vehiclesPos);
+		this->JsonOutput(speedName, vehiclesSpeed);
   }
 
   void Controller::StartAmbulanceVehicle(Ptr<Highway> highway)
@@ -187,6 +229,22 @@ namespace ns3
               this->JsonOutput("vehicleChosenAmong", vehiclesFoundNb);
               this->JsonOutput("ambuId", this->ambulanceId);
               this->JsonOutput("ambuStartX", ambuX);
+              // Calculate the density
+              double length=highway->GetHighwayLength()-ambuX-1.0;
+              list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 0, dir);
+              list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 1, dir);
+              double density0 = length/vehicles0.size();
+              double density1 = length/vehicles1.size();
+              Ptr<Vehicle> last0 = vehicles0.front();
+              Ptr<Vehicle> last1 = vehicles1.front();
+              this->JsonOutput("vehiclesOnLane0", (int) vehicles0.size());
+              this->JsonOutput("averageGapOnLane0", density0);
+              this->JsonOutput("lastVehicleXOnLane0", last0->GetPosition().x);
+              this->JsonOutput("vehiclesOnLane1", (int) vehicles1.size());
+              this->JsonOutput("averageGapOnLane1", density1);
+              this->JsonOutput("lastVehicleXOnLane1", last1->GetPosition().x);
+              this->JsonOutputInitVehicles(0, vehicles0);
+              this->JsonOutputInitVehicles(1, vehicles1);
           }
           YansWifiPhyHelper ambulancePhyHelper = YansWifiPhyHelper::Default();
           ambulancePhyHelper.SetChannel(highway->GetWifiChannel());
@@ -287,9 +345,24 @@ namespace ns3
 
   bool Controller::ControlVehicle(Ptr<Highway> highway, Ptr<Vehicle> vehicle, double dt)
   {
+	if (RecordAmbuPos==true && vehicle->GetVehicleId()==this->ambulanceId)
+	{
+		/*
+		ofstream outputFile;
+		outputFile.open(AmbuFile.c_str(), ios_base::app);
+		outputFile << now << " " << vehicle->GetPosition().x << endl;
+		*/
+		ostringstream pos, now;
+		pos << vehicle->GetPosition().x;
+		now << Simulator::Now().GetSeconds();
+		AmbuFileContent.append(now.str());
+		AmbuFileContent.append(" ");
+		AmbuFileContent.append(pos.str());
+		AmbuFileContent.append("\n");
+	}
     // we aim to create outputs which are readable by gnuplot for visulization purpose
     // this can be happen at beginning of each simulation step here.
-    if(Plot==true)
+	else if(Plot==true)
     {
       bool newStep=false;
       double now=Simulator::Now().GetHighPrecision().GetDouble();
@@ -368,6 +441,15 @@ namespace ns3
             this->JsonOutput("timeToReachDest", this->timeToReachDest);
             this->JsonOutput("ambuXwhenReached", vehicle->GetPosition().x);
             this->JsonOutput("ambuSpeedWhenReached", vehicle->GetVelocity());
+            this->JsonOutput("laneChangeNb", this->laneChangeNb);
+            this->JsonOutput("laneChangeITS", this->laneChangeITS);
+        }
+        if (RecordAmbuPos==true && vehicle->GetVehicleId()==this->ambulanceId)
+        {
+//			ofstream outputFile;
+//			outputFile.open(AmbuFile.c_str(), ios_base::app);
+        	ofstream outputFile(AmbuFile.c_str());
+			outputFile << AmbuFileContent;
         }
         Simulator::Stop();
 //        Simulator::Destroy();
@@ -450,7 +532,7 @@ namespace ns3
                 << " gapMin=" << veh->GetLaneChange()->GetGapMin()
                 << " biasRight= " << veh->GetLaneChange()->GetBiasRight() << endl;
             }
-
+            this->laneChangeITS++;
             this->AskChangeLane(highway, veh);
 
         }
@@ -461,6 +543,7 @@ namespace ns3
   void Controller::AskChangeLane(Ptr<Highway> highway, Ptr<Vehicle> veh)
   {
       // create a new model and assign it
+	  this->laneChangeNb++;
       Ptr<LaneChange> newLaneChangeModel = highway->CreateSedanLaneChangeModel();
       newLaneChangeModel->SetDbThreshold(this->emergencyDbThreshold);
       newLaneChangeModel->SetGapMin(1);

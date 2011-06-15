@@ -93,13 +93,15 @@ int main (int argc, char *argv[])
   double std1=0.9, std2=0.0;
   double maxFlow=5.0;
   double transmissionPower=21.5;
+  bool recordAmbuPos=false;
+  string af="./ambuX";
 
   // Process command-line args
   CommandLine cmd;
   cmd.AddValue ("time", "simulation time", simTime);
   cmd.AddValue ("plot", "generate output fot gnuplot", plot);
   cmd.AddValue ("dir", "one or two directional", twoDirectional);
-  cmd.AddValue ("dis", " 0 = Uniform, 1 = Expoential, 2 = Normal, 3 = Log Normal, default = 0", distribution);
+  cmd.AddValue ("dis", " 0 = Uniform, 1 = Exponential, 2 = Normal, 3 = Log Normal, default = 0", distribution);
   cmd.AddValue ("flow1", "traffic flow mean at entrance", flow1);
   cmd.AddValue ("std1", "traffic flow std at entrance", std1);
   cmd.AddValue ("vel1", "traffic velocity mean at entrance", vel1);
@@ -117,6 +119,8 @@ int main (int argc, char *argv[])
   cmd.AddValue ("rn", "run number", runNumber);
   cmd.AddValue ("fp", "prefix for filenames", fp);
   cmd.AddValue ("pw", "transmission power", transmissionPower);
+  cmd.AddValue ("ambu", "record ambu position", recordAmbuPos);
+  cmd.AddValue ("af", "ambulance position file", af);
 
   cmd.Parse(argc, argv);
 
@@ -130,7 +134,7 @@ int main (int argc, char *argv[])
   if(vel2<5) vel2=5;
   else if(vel2>33) vel2=33;
 
-  if(gap<2) gap=2;
+  if(gap<1) gap=1;
 
   directory+=fp;
   fp=directory;
@@ -176,6 +180,8 @@ int main (int argc, char *argv[])
   // Bind an experiment (controller) to highway
   controller->SetHighway(highway);
   controller->Plot=plot;
+  controller->RecordAmbuPos=recordAmbuPos;
+  controller->AmbuFile=af;
 
   // Setup parameters for highway
   highway->SetHighwayLength(15000);
