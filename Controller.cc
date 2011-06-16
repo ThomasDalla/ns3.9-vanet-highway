@@ -234,7 +234,7 @@ namespace ns3
   {
       double xMin = 500;
       double xMax = 2000;
-      int lane= 0;
+      int lane= 1;
       int dir= 1;
       list< Ptr< Vehicle > > vehicles = highway->FindVehiclesInSegment(xMin,xMax, lane, dir);
       int vehiclesFoundNb = vehicles.size();
@@ -252,6 +252,8 @@ namespace ns3
           Ptr<Vehicle> ambulance=vehicles.front();
           this->ambulanceId = ambulance->GetVehicleId();
           double ambuX = ambulance->GetPosition().x;
+          this->srcX  = ambuX;
+          this->destX = ambuX + 10000;
           if (!Plot)
           {
 //              cout << "I chose vehicle " << vehicle_i << " among " << vehiclesFoundNb << " vehicles."<< endl;
@@ -262,8 +264,8 @@ namespace ns3
               this->JsonOutput("ambuStartX", ambuX);
               // Calculate the density
               //double length=highway->GetHighwayLength()-ambuX-1.0;
-              list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 0, dir);
-              list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,highway->GetHighwayLength(), 1, dir);
+              list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 0, dir);
+              list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 1, dir);
               Ptr<Vehicle> last0 = vehicles0.front();
               Ptr<Vehicle> last1 = vehicles1.front();
               double density0 = (last0->GetPosition().x-ambuX-1.0)/vehicles0.size();
@@ -279,8 +281,8 @@ namespace ns3
           }
           YansWifiPhyHelper ambulancePhyHelper = YansWifiPhyHelper::Default();
           ambulancePhyHelper.SetChannel(highway->GetWifiChannel());
-          ambulancePhyHelper.Set("TxPowerStart",DoubleValue(50.0));
-          ambulancePhyHelper.Set("TxPowerEnd",DoubleValue(50.0));
+          ambulancePhyHelper.Set("TxPowerStart",DoubleValue(30.0));
+          ambulancePhyHelper.Set("TxPowerEnd",DoubleValue(30.0));
           ambulance->IsEquipped = true;
           ambulance->SetupWifi(highway->GetWifiHelper(), ambulancePhyHelper, highway->GetNqosWifiMacHelper());
           //ambulance->SetVehicleId();
@@ -288,7 +290,7 @@ namespace ns3
           //ambulance->SetLane(1);
           //ambulance->SetPosition(Vector(0.0, highway->GetYForLane(1,1), 0));
           //ambulance->SetVelocity(40.0);
-          ambulance->SetAcceleration(5.0);
+          //ambulance->SetAcceleration(5.0);
           Ptr<Model> ambulanceModel=highway->CreateSedanModel();
           ambulanceModel->SetDesiredVelocity(47.0);  // max speed 36(m/s)
           ambulanceModel->SetDeltaV(10.0);
@@ -312,8 +314,6 @@ namespace ns3
           // start recording data
           double now=Simulator::Now().GetSeconds();
           this->startTime = now;
-          this->srcX  = ambuX;
-          this->destX = ambuX + 10000;
           if (!Plot)
           {
 //              cout << "at t=" << now << " AMBULANCE (" << this->ambulanceId <<
