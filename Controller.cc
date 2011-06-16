@@ -234,7 +234,8 @@ namespace ns3
   {
       double xMin = 500;
       double xMax = 2000;
-      int lane= 1;
+      int lane= 0;
+      this->JsonOutput("ambuLane", lane);
       int dir= 1;
       list< Ptr< Vehicle > > vehicles = highway->FindVehiclesInSegment(xMin,xMax, lane, dir);
       int vehiclesFoundNb = vehicles.size();
