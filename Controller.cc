@@ -245,7 +245,7 @@ namespace ns3
 		ambulance->SetLane(ambuLane);
 		this->JsonOutput("ambuLane", ambuLane);
 		ambulance->SetPosition(Vector(1.0, highway->GetYForLane(ambuLane,1), 0)); // (x = 1)
-		ambulance->SetVelocity(130.0*10.0/36.0);
+		ambulance->SetVelocity(110.0*10.0/36.0);
 		ambulance->SetAcceleration(5.0);
 		Ptr<Model> ambulanceModel=highway->CreateSedanModel();
 		ambulanceModel->SetDesiredVelocity(165.0*10.0/36.0);  // max speed 36(m/s)
