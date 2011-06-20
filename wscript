@@ -3,7 +3,6 @@
 def build(bld):    
     obj = bld.create_ns3_program('vanet-highway-test', ['core'])
     obj.source = [
-    'Glob.cc',
 	'vanet-highway-test.cc',
 	'Highway.cc',
 	'Controller.cc',
@@ -14,7 +13,6 @@ def build(bld):
 	]
     obj2 = bld.create_ns3_program('vanet-highway-test-thomas', ['core'])
     obj2.source = [
-    'Glob.cc',
 	'vanet-highway-test-thomas.cc',
 	'Highway.cc',
 	'Controller.cc',
@@ -25,7 +23,6 @@ def build(bld):
 	]
     obj3 = bld.create_ns3_program('vanet-highway-scenario2', ['core'])
     obj3.source = [
-    'Glob.cc',
 	'vanet-highway-scenario2.cc',
 	'Highway.cc',
 	'Controller.cc',
