@@ -23,6 +23,7 @@
 
 #include "Highway.h"
 #include "Obstacle.h"
+//#include "Glob.h"
 
 using namespace ns3;
 using namespace std;
@@ -36,6 +37,10 @@ namespace ns3
   * Controller can be assumed as an application which is tied with the highway and vehicles.
   * we implement the VANETs simulations here, design and form the basic of each experiments.
   */
+
+  extern int laneChangeNb;
+  extern int laneChangeITS;
+
   class Controller : public Object
   {
     private:
@@ -49,8 +54,9 @@ namespace ns3
       double srcX;
       double emergencyDbThreshold;
       double dstForDriverToReact;
-      int laneChangeNb;
-      int laneChangeITS;
+      double packetMaxDist;
+      double packetAvgDist;
+      double packetNb;
     public:
       /// Constructor.
       Controller();
@@ -86,6 +92,9 @@ namespace ns3
       void JsonOutput(string name, double value);
       void JsonOutput(string name, string value);
       void JsonOutputInitVehicles(int lane, std::list<Ptr<Vehicle> > vehicles);
+      void DeployVehicles(Ptr<Highway> highway, int& VID); // deploy the vehicles
+	  void DebugDensity();
+	  void StartRecordingData();
   };
 }
 #endif

@@ -127,7 +127,8 @@ namespace ns3
           {
             others_disadv = 0;
           }
-          /*
+
+        /*
         if (this->m_dbThreshold<=0)
         {
             cout << "CHANGING LANE, VEHICLE " << me->GetVehicleId() << " | my_adv=" << my_adv
@@ -135,23 +136,28 @@ namespace ns3
             << " >> " << my_adv - m_politenessFactor * others_disadv << " >?> " << m_dbThreshold << "... ";
         }
         */
+
         if (my_adv - m_politenessFactor * others_disadv > m_dbThreshold)
           {
             if (this->m_dbThreshold <= 0)
             {
                 //cout << "yes!" << endl;
-                this->m_dbThreshold = 0.3;
+                this->m_dbThreshold = 1000000; // do not change lane again
+                laneChangeNb++;
+                if (me->IsEquipped)
+                	laneChangeITS++;
             }
             return true;
           }
         else
           {
-              /*
+
             if (this->m_dbThreshold <= 0)
             {
-                cout << "no..." << endl;
+                //cout << "no..." << endl;
+                //this->m_dbThreshold *= 10;
             }
-            */
+
             return false;
           }
       }

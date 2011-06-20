@@ -46,7 +46,7 @@ namespace ns3
     m_length = 0;
     m_width = 0;
 	IsEquipped=true;
-	RandomVariable RV = NormalVariable(100.0,1000.0);
+	RandomVariable RV = NormalVariable(80.0,1000.0);
 	double dist= RV.GetValue();
 	if (dist<20)
 	  dist=20;

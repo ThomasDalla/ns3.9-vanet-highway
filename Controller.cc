@@ -28,6 +28,8 @@
 using namespace std;
 using namespace ns3;
 
+const double AMBU_DIST = 10000.0;
+
  double string_to_double( const std::string& s )
  {
    std::istringstream i(s);
@@ -51,11 +53,15 @@ namespace ns3
 	  this->ambulanceId = 0;
 	  this->srcX  = 0.0;
 	  this->destX = 0.0;
-	  this->startTime = 0.0;
+	  this->startTime = -1.0;
 	  this->emergencyDbThreshold = -0.5;
+	  //this->emergencyDbThreshold = -100.0;
 	  this->dstForDriverToReact = 100;
-	  this->laneChangeNb=0;
-	  this->laneChangeITS=0;
+      this->packetMaxDist=0;
+      this->packetAvgDist=0;
+      this->packetNb=0;
+      laneChangeNb = 0;
+      laneChangeITS = 0;
   }
   Controller::Controller(Ptr<Highway> highway)
   {
@@ -144,16 +150,132 @@ namespace ns3
       highway->AddVehicle(wifiVehicle);
 */
 
-      Simulator::Schedule(Seconds(1000.0), &Controller::StartAmbulanceVehicle, this, highway);
-      highway->SetAutoInject(true);
-      this->JsonOutput("ambuFile", AmbuFile);
-      //cout << "\"ambuFileChar\":\"" << AmbuFile.c_str() << "\"," << endl;
+	  this->JsonOutput("ambuFile", AmbuFile);
+	  if (false) {
+		  Simulator::Schedule(Seconds(1000.0), &Controller::StartAmbulanceVehicle, this, highway);
+		  highway->SetAutoInject(true);
+		  //cout << "\"ambuFileChar\":\"" << AmbuFile.c_str() << "\"," << endl;
+	  } else {
+		  // manually create the highway
+		  highway->SetAutoInject(false);
+		  this->DeployVehicles(highway, VID);
+	  }
 
       // Return true: a signal to highway that the lane lists (queues) in where obstacles and vehicles are being added
       // must be sorted based on their positions.
       // Return false: to ignore sorting (do not return false when vehicles are manually added to the highway).
       return true;
   }
+
+	void Controller::DeployVehicles(Ptr<Highway> highway, int& VID)
+	{
+
+		// Deploy the vehicles
+
+		RandomVariable RVx = NormalVariable(100,1000);
+		RandomVariable RVs = NormalVariable(105*10.0/36.0,100);
+		RandomVariable RVds = NormalVariable(130*10.0/36.0,20);
+		RandomVariable RV = UniformVariable(0.0,100.0);
+
+		// For each lane
+		for (int lane=0; lane<=1; lane++)
+		{
+			// while the X position is < 10 000 m.
+			for (double x = AMBU_DIST/2-RVx.GetValue(); x>50; x -= RVx.GetValue())
+			{
+				double s = RVs.GetValue();
+				if (s>180*10.0/36.0)
+					s = 180*10.0/36.0;
+				double ds = RVds.GetValue();
+				if (ds>180*10.0/36.0)
+					ds = 180*10.0/36.0;
+				bool hasWifi = (RV.GetValue() <= highway->GetPenetrationRate()) ? true : false;
+				//cout << "[LANE " << lane << "][POS " << x << "][SPEED " << s*36.0/10.0 << "][DESIRED " << ds*36.0/10.0 << "][Wifi " << hasWifi << "]" << endl;
+				// Create the vehicle
+				Ptr<Vehicle> vehicle=CreateObject<Vehicle>();
+				if (hasWifi) {
+					YansWifiPhyHelper vehiclePhyHelper = YansWifiPhyHelper::Default();
+					vehiclePhyHelper.SetChannel(highway->GetWifiChannel());
+					vehiclePhyHelper.Set("TxPowerStart",DoubleValue(30.0));
+					vehiclePhyHelper.Set("TxPowerEnd",DoubleValue(30.0));
+					vehicle->IsEquipped = true;
+					vehicle->SetupWifi(highway->GetWifiHelper(), vehiclePhyHelper, highway->GetNqosWifiMacHelper());
+				} else {
+					vehicle->IsEquipped = false;
+				}
+				vehicle->SetVehicleId(VID++);
+				vehicle->SetDirection(1);
+				vehicle->SetLane(lane);
+				vehicle->SetPosition(Vector(x, highway->GetYForLane(lane,1), 0)); // (x = 1)
+				vehicle->SetVelocity(s);
+				//vehicle->SetAcceleration(5.0);
+				Ptr<Model> vehicleModel=highway->CreateSedanModel();
+				vehicleModel->SetDesiredVelocity(ds);  // max speed 36(m/s)
+				vehicleModel->SetDeltaV(4.0);
+				vehicleModel->SetAcceleration(0.5);
+				vehicleModel->SetDeceleration(3.0);
+				vehicle->SetModel(vehicleModel);          // or common sedan model: highway->GetSedanModel()
+				Ptr<LaneChange> vehicleLaneChangeModel = highway->CreateSedanLaneChangeModel();
+				//vehicleLaneChangeModel->SetDbThreshold(100.0); // no lane change
+				vehicle->SetLaneChange(vehicleLaneChangeModel);
+				vehicle->SetLength(4);
+				vehicle->SetWidth(2);
+				vehicle->SetReceiveCallback(highway->GetReceiveDataCallback());
+				vehicle->SetDevTxTraceCallback(highway->GetDevTxTraceCallback());
+				vehicle->SetDevRxTraceCallback(highway->GetDevRxTraceCallback());
+				vehicle->SetPhyRxOkTraceCallback(highway->GetPhyRxOkTraceCallback());
+				vehicle->SetPhyRxErrorTraceCallback(highway->GetPhyRxErrorTraceCallback());
+				vehicle->SetPhyTxTraceCallback(highway->GetPhyTxTraceCallback());
+				vehicle->SetPhyStateTraceCallback(highway->GetPhyStateTraceCallback());
+				highway->AddVehicle(vehicle);
+			}
+		}
+
+		// Deploy the Emergency Vehicle (i.e.: ambulance)
+		Ptr<Vehicle> ambulance=CreateObject<Vehicle>();
+		YansWifiPhyHelper ambulancePhyHelper = YansWifiPhyHelper::Default();
+		ambulancePhyHelper.SetChannel(highway->GetWifiChannel());
+		ambulancePhyHelper.Set("TxPowerStart",DoubleValue(40.0));
+		ambulancePhyHelper.Set("TxPowerEnd",DoubleValue(40.0));
+		ambulance->IsEquipped = true;
+		ambulance->SetupWifi(highway->GetWifiHelper(), ambulancePhyHelper, highway->GetNqosWifiMacHelper());
+		ambulance->SetVehicleId(VID++);
+		ambulance->SetDirection(1);
+		int ambuLane = 1;
+		ambulance->SetLane(ambuLane);
+		this->JsonOutput("ambuLane", ambuLane);
+		ambulance->SetPosition(Vector(1.0, highway->GetYForLane(ambuLane,1), 0)); // (x = 1)
+		ambulance->SetVelocity(130.0*10.0/36.0);
+		ambulance->SetAcceleration(5.0);
+		Ptr<Model> ambulanceModel=highway->CreateSedanModel();
+		ambulanceModel->SetDesiredVelocity(165.0*10.0/36.0);  // max speed 36(m/s)
+		ambulanceModel->SetDeltaV(8.0);
+		ambulanceModel->SetAcceleration(1.0);
+		ambulanceModel->SetDeceleration(6.0);
+		ambulance->SetModel(ambulanceModel);          // or common sedan model: highway->GetSedanModel()
+		Ptr<LaneChange> ambulanceLaneChangeModel = highway->CreateSedanLaneChangeModel();
+		ambulanceLaneChangeModel->SetDbThreshold(1000000); // no lane change
+		ambulance->SetLaneChange(ambulanceLaneChangeModel);
+		ambulance->SetLength(4);
+		ambulance->SetWidth(2);
+		ambulance->SetReceiveCallback(highway->GetReceiveDataCallback());
+		ambulance->SetDevTxTraceCallback(highway->GetDevTxTraceCallback());
+		ambulance->SetDevRxTraceCallback(highway->GetDevRxTraceCallback());
+		ambulance->SetPhyRxOkTraceCallback(highway->GetPhyRxOkTraceCallback());
+		ambulance->SetPhyRxErrorTraceCallback(highway->GetPhyRxErrorTraceCallback());
+		ambulance->SetPhyTxTraceCallback(highway->GetPhyTxTraceCallback());
+		ambulance->SetPhyStateTraceCallback(highway->GetPhyStateTraceCallback());
+		highway->AddVehicle(ambulance);
+		this->ambulanceId = ambulance->GetVehicleId();
+		double ambuX = ambulance->GetPosition().x;
+		this->srcX  = ambuX;
+		this->destX = ambuX + AMBU_DIST;
+		Simulator::Schedule(Seconds(0), &Controller::BroadcastWarning, this, ambulance);
+
+		this->DebugDensity();
+		this->StartRecordingData();
+
+	}
 
   void Controller::JsonOutput(string name, int value)
   {
@@ -206,7 +328,7 @@ namespace ns3
 		  vel << v->GetVelocity();
 		  if (nouveau==false) {
 			  k++;
-			  currentGap = currentPos-previousPos;
+			  currentGap = abs(currentPos-previousPos);
 			  gapTotal += currentGap;
 			  if (currentGap>maxGap)
 				  maxGap = currentGap;
@@ -228,6 +350,47 @@ namespace ns3
 		this->JsonOutput(averageGapName, averageGap);
 		this->JsonOutput(minGapName, minGap);
 		this->JsonOutput(maxGapName, maxGap);
+  }
+
+  void Controller::StartRecordingData()
+  {
+	    double now=Simulator::Now().GetSeconds();
+		this->startTime = now;
+		if (!Plot)
+		{
+		//              cout << "at t=" << now << " AMBULANCE (" << this->ambulanceId <<
+		//              ") START RECORDING TIME! Position: " << ambuX << "m"
+		//              << " Speed: " << ambulance->GetVelocity() << endl;
+			this->JsonOutput("startRecordingTime", now);
+		}
+  }
+
+
+  void Controller::DebugDensity()
+  {
+	  Ptr<Vehicle> ambu = highway->FindVehicle(this->ambulanceId);
+	  double ambuX = ambu->GetPosition().x;
+      this->JsonOutput("ambuId", this->ambulanceId);
+      this->JsonOutput("ambuStartX", ambuX);
+      // Calculate the density
+      //double length=highway->GetHighwayLength()-ambuX-1.0;
+      int dir= 1;
+      list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 0, dir);
+      list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 1, dir);
+      Ptr<Vehicle> last0 = vehicles0.front();
+      Ptr<Vehicle> last1 = vehicles1.front();
+      double density0 = (last0->GetPosition().x-ambuX-1.0)/vehicles0.size();
+      double density1 = (last1->GetPosition().x-ambuX-1.0)/vehicles1.size();
+      this->JsonOutput("vehiclesOnLane0", (int) vehicles0.size());
+      this->JsonOutput("averageGapOnLane0", density0);
+      this->JsonOutput("lastVehicleXOnLane0", last0->GetPosition().x);
+      this->JsonOutput("vehiclesOnLane1", (int) vehicles1.size());
+      this->JsonOutput("averageGapOnLane1", density1);
+      this->JsonOutput("lastVehicleXOnLane1", last1->GetPosition().x);
+      this->JsonOutputInitVehicles(0, vehicles0);
+      this->JsonOutputInitVehicles(1, vehicles1);
+	  this->JsonOutput("ambuXwhenStart",ambuX);
+	  this->JsonOutput("ambuSpeedWhenStart",ambu->GetVelocity());
   }
 
   void Controller::StartAmbulanceVehicle(Ptr<Highway> highway)
@@ -261,24 +424,7 @@ namespace ns3
 //              cout << "ID " << this->ambulanceId << " Position: " << ambuX << endl;
               this->JsonOutput("vehicleChosen", vehicle_i);
               this->JsonOutput("vehicleChosenAmong", vehiclesFoundNb);
-              this->JsonOutput("ambuId", this->ambulanceId);
-              this->JsonOutput("ambuStartX", ambuX);
-              // Calculate the density
-              //double length=highway->GetHighwayLength()-ambuX-1.0;
-              list< Ptr< Vehicle > > vehicles0 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 0, dir);
-              list< Ptr< Vehicle > > vehicles1 = highway->FindVehiclesInSegment(ambuX+1.0,this->destX, 1, dir);
-              Ptr<Vehicle> last0 = vehicles0.front();
-              Ptr<Vehicle> last1 = vehicles1.front();
-              double density0 = (last0->GetPosition().x-ambuX-1.0)/vehicles0.size();
-              double density1 = (last1->GetPosition().x-ambuX-1.0)/vehicles1.size();
-              this->JsonOutput("vehiclesOnLane0", (int) vehicles0.size());
-              this->JsonOutput("averageGapOnLane0", density0);
-              this->JsonOutput("lastVehicleXOnLane0", last0->GetPosition().x);
-              this->JsonOutput("vehiclesOnLane1", (int) vehicles1.size());
-              this->JsonOutput("averageGapOnLane1", density1);
-              this->JsonOutput("lastVehicleXOnLane1", last1->GetPosition().x);
-              this->JsonOutputInitVehicles(0, vehicles0);
-              this->JsonOutputInitVehicles(1, vehicles1);
+              this->DebugDensity();
           }
           YansWifiPhyHelper ambulancePhyHelper = YansWifiPhyHelper::Default();
           ambulancePhyHelper.SetChannel(highway->GetWifiChannel());
@@ -295,8 +441,8 @@ namespace ns3
           Ptr<Model> ambulanceModel=highway->CreateSedanModel();
           ambulanceModel->SetDesiredVelocity(47.0);  // max speed 36(m/s)
           ambulanceModel->SetDeltaV(10.0);
-          ambulanceModel->SetAcceleration(3.0);
-          ambulanceModel->SetDeceleration(3.0);
+          ambulanceModel->SetAcceleration(1.0);
+          ambulanceModel->SetDeceleration(6.0);
           ambulance->SetModel(ambulanceModel);          // or common sedan model: highway->GetSedanModel()
           Ptr<LaneChange> ambulanceLaneChangeModel = highway->CreateSedanLaneChangeModel();
           ambulanceLaneChangeModel->SetDbThreshold(100.0); // no lane change
@@ -313,17 +459,7 @@ namespace ns3
           Simulator::Schedule(Seconds(1), &Controller::BroadcastWarning, this, ambulance);
 
           // start recording data
-          double now=Simulator::Now().GetSeconds();
-          this->startTime = now;
-          if (!Plot)
-          {
-//              cout << "at t=" << now << " AMBULANCE (" << this->ambulanceId <<
-//              ") START RECORDING TIME! Position: " << ambuX << "m"
-//              << " Speed: " << ambulance->GetVelocity() << endl;
-              this->JsonOutput("startRecordingTime", now);
-              this->JsonOutput("ambuXwhenStart",ambuX);
-              this->JsonOutput("ambuSpeedWhenStart",ambulance->GetVelocity());
-          }
+          this->StartRecordingData();
 
       }
 
@@ -439,7 +575,7 @@ namespace ns3
 */
 
     // Change lane for a driver without wifi
-    if(vehicle->GetVehicleId()!=this->ambulanceId && this->startTime>0 && vehicle->GetLaneChange()->GetDbThreshold()!=this->emergencyDbThreshold && !this->destinationReached)
+    if(vehicle->GetVehicleId()!=this->ambulanceId && this->startTime>=0 && vehicle->GetLaneChange()->GetDbThreshold()!=this->emergencyDbThreshold && !this->destinationReached)
     {
         Ptr<Vehicle> ambulance = highway->FindVehicle(this->ambulanceId);
         double ambuX    = ambulance->GetPosition().x;
@@ -459,7 +595,7 @@ namespace ns3
     }
 
     // to record when the ambulance reaches its destination
-    else if(vehicle->GetVehicleId()==this->ambulanceId && vehicle->GetPosition().x >=this->destX && this->startTime>0 && !this->destinationReached)
+    else if(vehicle->GetVehicleId()==this->ambulanceId && vehicle->GetPosition().x >=this->destX && this->startTime>=0 && !this->destinationReached)
     {
         this->destinationReached = true;
         double now=Simulator::Now().GetSeconds();
@@ -473,16 +609,18 @@ namespace ns3
             this->JsonOutput("timeToReachDest", this->timeToReachDest);
             this->JsonOutput("ambuXwhenReached", vehicle->GetPosition().x);
             this->JsonOutput("ambuSpeedWhenReached", vehicle->GetVelocity());
-            this->JsonOutput("laneChangeNb", this->laneChangeNb);
-            this->JsonOutput("laneChangeITS", this->laneChangeITS);
+            this->JsonOutput("laneChangeNb", laneChangeNb);
+            this->JsonOutput("laneChangeITS", laneChangeITS);
         }
-        if (RecordAmbuPos==true && vehicle->GetVehicleId()==this->ambulanceId)
+        if (RecordAmbuPos==true)
         {
 //			ofstream outputFile;
 //			outputFile.open(AmbuFile.c_str(), ios_base::app);
         	ofstream outputFile(AmbuFile.c_str());
 			outputFile << AmbuFileContent;
         }
+        this->JsonOutput("packetMaxDist", this->packetMaxDist);
+        this->JsonOutput("packetAvgDist", this->packetAvgDist);
         Simulator::Stop();
 //        Simulator::Destroy();
       //vehicle->SetAcceleration(-2.0);
@@ -520,7 +658,7 @@ namespace ns3
       veh->SendTo(veh->GetBroadcastAddress(), packet);
       //cout << " done! (" << veh->GetBroadcastAddress() << ")" << endl;
 
-      Simulator::Schedule(Seconds(5.0),&Controller::BroadcastWarning, this, veh);
+      Simulator::Schedule(Seconds(2.0),&Controller::BroadcastWarning, this, veh);
     }
   }
 
@@ -553,6 +691,14 @@ namespace ns3
         double ambuLane = string_to_double(strs.at(2));
         double now=Simulator::Now().GetSeconds();
         //cout << "ambuX=" << ambuX << "ambuLane=" << ambuLane << endl;
+        double dstToAmbu = abs(vehX - ambuX);
+        if (dstToAmbu>this->packetMaxDist)
+        	this->packetMaxDist = dstToAmbu;
+        if (this->packetAvgDist==0)
+        	this->packetAvgDist= dstToAmbu;
+        else
+        	this->packetAvgDist = (this->packetAvgDist*this->packetNb+dstToAmbu)/(this->packetNb+1);
+        this->packetNb++;
         if (lane==ambuLane && ambuX < vehX) {
             if(false&&!Plot)
             {
@@ -564,7 +710,8 @@ namespace ns3
                 << " gapMin=" << veh->GetLaneChange()->GetGapMin()
                 << " biasRight= " << veh->GetLaneChange()->GetBiasRight() << endl;
             }
-            this->laneChangeITS++;
+
+            //this->laneChangeITS++;
             this->AskChangeLane(highway, veh);
 
         }
@@ -574,9 +721,12 @@ namespace ns3
 
   void Controller::AskChangeLane(Ptr<Highway> highway, Ptr<Vehicle> veh)
   {
-      // create a new model and assign it
-	  this->laneChangeNb++;
-      Ptr<LaneChange> newLaneChangeModel = highway->CreateSedanLaneChangeModel();
+
+	  //this->laneChangeNb++;
+
+	  /*
+	  // create a new model and assign it
+	  Ptr<LaneChange> newLaneChangeModel = highway->CreateSedanLaneChangeModel();
       newLaneChangeModel->SetDbThreshold(this->emergencyDbThreshold);
       newLaneChangeModel->SetGapMin(1);
       //newLaneChangeModel->SetPolitenessFactor(1);
@@ -585,6 +735,21 @@ namespace ns3
       //std::list<Ptr<Vehicle> > vehi_list;
       //vehi_list.insert(vehi_list.begin(),veh);
       //this->highway->ChangeLane(&vehi_list);"
+      */
+
+      // v2
+	  double currentThreshold = veh->GetLaneChange()->GetDbThreshold();
+	  if (currentThreshold>=0) {
+		  veh->GetLaneChange()->SetDbThreshold(this->emergencyDbThreshold);
+		  veh->GetLaneChange()->SetGapMin(1);
+		  veh->GetLaneChange()->SetMaxSafeBreakingDeceleration(24.0);
+	  } else if (veh->IsEquipped){
+	  //} else {
+		  veh->GetLaneChange()->SetDbThreshold(currentThreshold+this->emergencyDbThreshold*2);
+	  } else {
+		  veh->GetLaneChange()->SetDbThreshold(currentThreshold+this->emergencyDbThreshold*0.2);
+	  }
+      //veh->GetLaneChange()->SetBiasRight(100);
   }
 
 }

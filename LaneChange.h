@@ -24,9 +24,13 @@
 #include "ns3/ptr.h"
 #include "ns3/object.h"
 #include "Vehicle.h"
+//#include "Glob.h"
+
 
 namespace ns3
 {
+  extern int laneChangeNb;
+  extern int laneChangeITS;
   class Vehicle;
   /**
   * \brief IDM/MOBIL LaneChange Model.
@@ -105,7 +109,8 @@ namespace ns3
 	  *
       * see: http://www.vwi.tu-dresden.de/~treiber/MicroApplet/MOBIL.html
       */
-      bool CheckLaneChange(Ptr<Vehicle> me, Ptr<Vehicle> fOld, Ptr<Vehicle> fNew, Ptr<Vehicle> bNew, bool toLeft);    
+      bool CheckLaneChange(Ptr<Vehicle> me, Ptr<Vehicle> fOld, Ptr<Vehicle> fNew, Ptr<Vehicle> bNew, bool toLeft);
+
   };
 };
 #endif
