@@ -181,7 +181,7 @@ namespace ns3
 		for (int lane=0; lane<=1; lane++)
 		{
 			// while the X position is < 10 000 m.
-			for (double x = AMBU_DIST/2-RVx.GetValue(); x>50; x -= RVx.GetValue())
+			for (double x = AMBU_DIST/2-RVx.GetValue(); x>150; x -= RVx.GetValue())
 			{
 				double s = RVs.GetValue();
 				if (s>180*10.0/36.0)
@@ -245,8 +245,8 @@ namespace ns3
 		ambulance->SetLane(ambuLane);
 		this->JsonOutput("ambuLane", ambuLane);
 		ambulance->SetPosition(Vector(1.0, highway->GetYForLane(ambuLane,1), 0)); // (x = 1)
-		ambulance->SetVelocity(110.0*10.0/36.0);
-		ambulance->SetAcceleration(5.0);
+		ambulance->SetVelocity(130.0*10.0/36.0);
+		//ambulance->SetAcceleration(1.0);
 		Ptr<Model> ambulanceModel=highway->CreateSedanModel();
 		ambulanceModel->SetDesiredVelocity(165.0*10.0/36.0);  // max speed 36(m/s)
 		ambulanceModel->SetDeltaV(8.0);
