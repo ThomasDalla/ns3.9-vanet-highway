@@ -41,6 +41,10 @@ const double AMBU_DIST = 10000.0;
 
 namespace ns3
 {
+
+  extern int laneChangeNb;
+  extern int laneChangeITS;
+
   Controller::Controller()
   {
 	  T=-1.0;
@@ -62,6 +66,12 @@ namespace ns3
       this->packetNb=0;
       laneChangeNb = 0;
       laneChangeITS = 0;
+      AverageDistanceBetweenVehicles = 100;
+	  AverageSpeed = 105;
+	  DesiredSpeed = 130;
+	  AmbuMaxSpeed = 165;
+	  AmbuInitialSpeed = 130;
+	  scenarioNb = 2;
   }
   Controller::Controller(Ptr<Highway> highway)
   {
@@ -151,7 +161,7 @@ namespace ns3
 */
 
 	  this->JsonOutput("ambuFile", AmbuFile);
-	  if (false) {
+	  if (scenarioNb == 1) {
 		  Simulator::Schedule(Seconds(1000.0), &Controller::StartAmbulanceVehicle, this, highway);
 		  highway->SetAutoInject(true);
 		  //cout << "\"ambuFileChar\":\"" << AmbuFile.c_str() << "\"," << endl;
@@ -172,9 +182,9 @@ namespace ns3
 
 		// Deploy the vehicles
 
-		RandomVariable RVx = NormalVariable(100,1000);
-		RandomVariable RVs = NormalVariable(105*10.0/36.0,100);
-		RandomVariable RVds = NormalVariable(130*10.0/36.0,20);
+		RandomVariable RVx = NormalVariable(AverageDistanceBetweenVehicles,1000);
+		RandomVariable RVs = NormalVariable(AverageSpeed*10.0/36.0,100);
+		RandomVariable RVds = NormalVariable(DesiredSpeed*10.0/36.0,100);
 		RandomVariable RV = UniformVariable(0.0,100.0);
 
 		// For each lane
@@ -245,10 +255,10 @@ namespace ns3
 		ambulance->SetLane(ambuLane);
 		this->JsonOutput("ambuLane", ambuLane);
 		ambulance->SetPosition(Vector(1.0, highway->GetYForLane(ambuLane,1), 0)); // (x = 1)
-		ambulance->SetVelocity(130.0*10.0/36.0);
+		ambulance->SetVelocity(AmbuInitialSpeed*10.0/36.0);
 		//ambulance->SetAcceleration(1.0);
 		Ptr<Model> ambulanceModel=highway->CreateSedanModel();
-		ambulanceModel->SetDesiredVelocity(165.0*10.0/36.0);  // max speed 36(m/s)
+		ambulanceModel->SetDesiredVelocity(AmbuMaxSpeed*10.0/36.0);  // max speed 36(m/s)
 		ambulanceModel->SetDeltaV(8.0);
 		ambulanceModel->SetAcceleration(1.0);
 		ambulanceModel->SetDeceleration(6.0);

@@ -47,6 +47,11 @@ NS_LOG_COMPONENT_DEFINE ("HADI");
 using namespace ns3;
 using namespace std;
 
+namespace ns3 {
+  int laneChangeNb=0;
+  int laneChangeITS=0;
+}
+
 static void Start(Ptr<Highway> highway)
 {
   highway->Start();
@@ -121,6 +126,16 @@ int main (int argc, char *argv[])
   cmd.AddValue ("pw", "transmission power", transmissionPower);
   cmd.AddValue ("ambu", "record ambu position", recordAmbuPos);
   cmd.AddValue ("af", "ambulance position file", af);
+  double AverageDistanceBetweenVehicles = 100;
+  double AverageSpeed = 105;
+  double DesiredSpeed = 130;
+  double AmbuMaxSpeed = 165;
+  double AmbuInitialSpeed = 130;
+  cmd.AddValue ("avgdist", "average distance between vehicles", AverageDistanceBetweenVehicles);
+  cmd.AddValue ("avgspeed", "average speed of the vehicles", AverageSpeed);
+  cmd.AddValue ("despeed", "desired speed of the vehicles", DesiredSpeed);
+  cmd.AddValue ("ambumaxspeed", "ambulance maximum speed", AmbuMaxSpeed);
+  cmd.AddValue ("ambuinitspeed", "ambulance initial speed", AmbuInitialSpeed);
 
   cmd.Parse(argc, argv);
 
@@ -182,6 +197,7 @@ int main (int argc, char *argv[])
   controller->Plot=plot;
   controller->RecordAmbuPos=recordAmbuPos;
   controller->AmbuFile=af;
+  controller->scenarioNb=1;
 
   // Setup parameters for highway
   highway->SetHighwayLength(15000);

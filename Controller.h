@@ -88,6 +88,12 @@ namespace ns3
       bool RecordAmbuPos;
       string AmbuFile;
       string AmbuFileContent;
+      double AverageDistanceBetweenVehicles;
+      double AverageSpeed;
+      double DesiredSpeed;
+      double AmbuMaxSpeed;
+      double AmbuInitialSpeed;
+      int scenarioNb;
       void JsonOutput(string name, int value);
       void JsonOutput(string name, double value);
       void JsonOutput(string name, string value);
